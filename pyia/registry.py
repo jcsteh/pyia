@@ -32,6 +32,8 @@ from comtypes.client import PumpEvents
 from event import Event
 from utils import accessibleObjectFromEvent
 
+RPC_S_CALLPENDING = -2147417835
+
 class Registry(object):
     def __init__(self):
         self.clients = {}
@@ -87,8 +89,15 @@ class Registry(object):
 
 
     def iter_loop(self, timeout=1):
-        PumpEvents(timeout)
-        
+        try:
+            PumpEvents(timeout)
+        except OSError as e:
+            # Work around https://github.com/enthought/comtypes/issues/138.
+            # RPC_S_CALLPENDING just means the timeout expired, so we can
+            # ignore it.
+            if e.winerror != RPC_S_CALLPENDING:
+                raise
+
     def start(self):
         while True:
             try:
